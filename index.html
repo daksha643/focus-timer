@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Focus Timer</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d0d1a;color:#f1f5f9;min-height:100vh}
+nav{display:flex;justify-content:space-between;align-items:center;padding:14px 28px;background:#13132a;border-bottom:1px solid #2a2a50;position:sticky;top:0;z-index:50}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-name{font-size:18px;font-weight:800;color:#f1f5f9}
+.logo-sub{font-size:11px;color:#475569}
+#settings-btn{background:none;border:1px solid #2a2a50;border-radius:8px;padding:6px 12px;font-size:18px;cursor:pointer;color:#f1f5f9}
+main{max-width:1000px;margin:0 auto;padding:32px 24px;display:grid;grid-template-columns:1fr 340px;gap:28px}
+@media(max-width:700px){main{grid-template-columns:1fr}}
+
+/* Timer */
+.timer-col{display:flex;flex-direction:column;align-items:center;gap:20px}
+.mode-tabs{display:flex;gap:6px;background:#13132a;border:1px solid #2a2a50;border-radius:10px;padding:4px}
+.mode-tab{padding:8px 16px;border:1px solid transparent;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:#475569;transition:all .2s;font-family:inherit}
+.mode-tab.active{background:#6366f122;color:#6366f1;border-color:#6366f155}
+.mode-tab.active.green{background:#10b98122;color:#10b981;border-color:#10b98155}
+.mode-tab.active.amber{background:#f59e0b22;color:#f59e0b;border-color:#f59e0b55}
+
+.ring-wrap{position:relative;width:280px;height:280px;display:flex;align-items:center;justify-content:center}
+#timer-ring{transform:rotate(-90deg)}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+#time-display{font-size:52px;font-weight:800;color:#f1f5f9;letter-spacing:-2px;font-variant-numeric:tabular-nums}
+#mode-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#6366f1}
+
+.controls{display:flex;align-items:center;gap:16px}
+.icon-btn{width:46px;height:46px;background:#13132a;border:1px solid #2a2a50;border-radius:50%;color:#94a3b8;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+#play-btn{width:68px;height:68px;border:none;border-radius:50%;background:#6366f1;color:#fff;font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;box-shadow:none}
+
+.rounds{display:flex;align-items:center;gap:6px}
+.round-dot{width:8px;height:8px;border-radius:50%;background:#2a2a50;transition:background .3s}
+#round-label{font-size:12px;color:#475569;margin-left:4px}
+
+/* Side */
+.side-col{display:flex;flex-direction:column;gap:16px}
+.card{background:#13132a;border:1px solid #2a2a50;border-radius:12px;padding:18px 20px}
+.card-title{font-size:12px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
+.task-input-row{display:flex;gap:8px;margin-bottom:10px}
+.task-input{flex:1;background:#0d0d1a;border:1.5px solid #2a2a50;border-radius:7px;color:#f1f5f9;font-size:13px;padding:8px 11px;outline:none;font-family:inherit}
+.task-input:focus{border-color:#6366f1}
+.add-btn{width:36px;height:36px;background:#6366f1;border:none;border-radius:7px;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.task-list{display:flex;flex-direction:column;gap:6px}
+.task-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;border:1px solid #2a2a50;cursor:pointer;transition:all .15s}
+.task-row.active{background:#6366f111;border-color:#6366f144}
+.task-row.done{opacity:.5}
+.check-btn{width:20px;height:20px;border-radius:5px;border:2px solid #475569;background:transparent;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;cursor:pointer;flex-shrink:0;transition:all .15s}
+.check-btn.checked{background:#10b981;border-color:#10b981}
+.task-text{font-size:13px;color:#f1f5f9;flex:1}
+.task-text.done-text{text-decoration:line-through;color:#475569}
+.del-btn{background:none;border:none;color:#475569;font-size:16px;cursor:pointer;flex-shrink:0;padding:0 2px}
+.tomato{font-size:11px;flex-shrink:0}
+.empty-hint{font-size:13px;color:#334155;text-align:center;padding:12px 0;font-style:italic}
+
+/* History */
+.hist-row{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:7px;margin-bottom:4px}
+.hist-icon{font-size:15px;flex-shrink:0}
+.hist-info{flex:1;font-size:13px;color:#f1f5f9}
+.hist-time{font-size:11px;color:#475569;flex-shrink:0}
+
+/* Settings Modal */
+#settings-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;padding:20px}
+#settings-modal.open{display:flex}
+.modal-panel{background:#13132a;border:1px solid #2a2a50;border-radius:16px;width:100%;max-width:400px}
+.modal-header{padding:18px 22px;border-bottom:1px solid #2a2a50;display:flex;justify-content:space-between;align-items:center}
+.modal-title{font-size:16px;font-weight:700;color:#f1f5f9}
+.modal-close{background:none;border:none;color:#94a3b8;font-size:24px;cursor:pointer;line-height:1}
+.modal-body{padding:22px;display:flex;flex-direction:column;gap:14px}
+.setting-row{display:flex;justify-content:space-between;align-items:center}
+.setting-label{font-size:14px;color:#94a3b8}
+.setting-input{width:70px;background:#0d0d1a;border:1.5px solid #2a2a50;border-radius:7px;color:#f1f5f9;font-size:15px;font-weight:700;padding:7px 10px;text-align:center;outline:none;font-family:inherit}
+.modal-footer{padding:16px 22px;border-top:1px solid #2a2a50;display:flex;justify-content:flex-end;gap:10px}
+.cancel-btn{padding:9px 18px;background:transparent;border:1px solid #2a2a50;border-radius:8px;color:#94a3b8;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.save-btn{padding:9px 22px;background:#6366f1;border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+
+/* Toast */
+#toast{display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#13132a;border:1px solid #2a2a50;border-radius:10px;padding:10px 22px;font-size:13px;font-weight:600;color:#f1f5f9;z-index:300;white-space:nowrap;pointer-events:none}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">
+    <svg width="24" height="24" viewBox="0 0 100 100">
+      <circle cx="50" cy="52" r="36" stroke="#6366f1" stroke-width="8" fill="none"/>
+      <line x1="50" y1="52" x2="50" y2="24" stroke="#f1f5f9" stroke-width="7" stroke-linecap="round"/>
+      <line x1="50" y1="52" x2="68" y2="62" stroke="#6366f1" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="50" cy="52" r="5" fill="#f1f5f9"/>
+    </svg>
+    <div>
+      <div class="logo-name">Focus Timer</div>
+      <div class="logo-sub">Pomodoro tracker</div>
+    </div>
+  </div>
+  <button id="settings-btn">⚙️</button>
+</nav>
+
+<main>
+  <!-- Timer Column -->
+  <div class="timer-col">
+    <div class="mode-tabs">
+      <button class="mode-tab active" data-mode="FOCUS">Focus</button>
+      <button class="mode-tab" data-mode="SHORT">Short Break</button>
+      <button class="mode-tab" data-mode="LONG">Long Break</button>
+    </div>
+
+    <div class="ring-wrap">
+      <svg id="timer-ring" width="280" height="280">
+        <circle cx="140" cy="140" r="120" fill="none" stroke="#ffffff08" stroke-width="10"/>
+        <circle id="ring-progress" cx="140" cy="140" r="120" fill="none"
+          stroke="#6366f1" stroke-width="10" stroke-linecap="round"
+          stroke-dasharray="753.98" stroke-dashoffset="0"
+          style="transition:stroke-dashoffset .8s ease,stroke .4s ease"/>
+      </svg>
+      <div class="ring-center">
+        <div id="time-display">25:00</div>
+        <div id="mode-label">Focus</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="icon-btn" id="reset-btn" title="Reset">↺</button>
+      <button id="play-btn">▶</button>
+      <button class="icon-btn" id="skip-btn" title="Skip">⏭</button>
+    </div>
+
+    <div class="rounds">
+      <div class="round-dot" id="dot0"></div>
+      <div class="round-dot" id="dot1"></div>
+      <div class="round-dot" id="dot2"></div>
+      <div class="round-dot" id="dot3"></div>
+      <span id="round-label">Round 1</span>
+    </div>
+  </div>
+
+  <!-- Side Column -->
+  <div class="side-col">
+    <!-- Tasks -->
+    <div class="card">
+      <div class="card-title">Tasks</div>
+      <div class="task-input-row">
+        <input class="task-input" id="task-input" placeholder="Add a task… (press Enter)" />
+        <button class="add-btn" id="add-task-btn">+</button>
+      </div>
+      <div class="task-list" id="task-list">
+        <p class="empty-hint" id="task-empty">No tasks yet. Add one above!</p>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="card" id="hist-card" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div class="card-title" style="margin-bottom:0">Session History</div>
+        <button onclick="clearHistory()" style="background:none;border:1px solid #2a2a50;border-radius:6px;color:#475569;font-size:11px;padding:3px 10px;cursor:pointer">Clear</button>
+      </div>
+      <div id="hist-list"></div>
+    </div>
+  </div>
+</main>
+
+<!-- Settings Modal -->
+<div id="settings-modal">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <span class="modal-title">⚙️ Settings</span>
+      <button class="modal-close" id="modal-close">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:11px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.08em">Timer Durations</p>
+      <div class="setting-row">
+        <label class="setting-label">🎯 Focus (minutes)</label>
+        <input class="setting-input" id="set-focus" type="number" min="1" max="180" value="25"/>
+      </div>
+      <div class="setting-row">
+        <label class="setting-label">☕ Short Break (minutes)</label>
+        <input class="setting-input" id="set-short" type="number" min="1" max="60" value="5"/>
+      </div>
+      <div class="setting-row">
+        <label class="setting-label">🌿 Long Break (minutes)</label>
+        <input class="setting-input" id="set-long" type="number" min="1" max="60" value="15"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="cancel-btn" id="modal-cancel">Cancel</button>
+      <button class="save-btn" id="modal-save">✓ Save &amp; Apply</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── State ────────────────────────────────────────────────────────────────────
+let settings = JSON.parse(localStorage.getItem('ft_settings') || '{"focusMin":25,"shortMin":5,"longMin":15}')
+let tasks    = JSON.parse(localStorage.getItem('ft_tasks')    || '[]')
+let history  = JSON.parse(localStorage.getItem('ft_history')  || '[]')
+
+const MODES = {
+  FOCUS: { label:'Focus',       color:'#6366f1', tabClass:'',      getMin:()=>settings.focusMin },
+  SHORT: { label:'Short Break', color:'#10b981', tabClass:'green', getMin:()=>settings.shortMin },
+  LONG:  { label:'Long Break',  color:'#f59e0b', tabClass:'amber', getMin:()=>settings.longMin  },
+}
+
+let mode      = 'FOCUS'
+let timeLeft  = settings.focusMin * 60
+let running   = false
+let round     = 1
+let activeId  = null
+let interval  = null
+
+// ── DOM refs ─────────────────────────────────────────────────────────────────
+const timeDisplay  = document.getElementById('time-display')
+const modeLabel    = document.getElementById('mode-label')
+const ringProgress = document.getElementById('ring-progress')
+const playBtn      = document.getElementById('play-btn')
+const roundLabel   = document.getElementById('round-label')
+const CIRC         = 2 * Math.PI * 120  // 753.98
+
+// ── Render timer ─────────────────────────────────────────────────────────────
+function renderTimer() {
+  const m = MODES[mode]
+  const total = m.getMin() * 60
+  const mins  = String(Math.floor(timeLeft/60)).padStart(2,'0')
+  const secs  = String(timeLeft%60).padStart(2,'0')
+
+  timeDisplay.textContent = `${mins}:${secs}`
+  modeLabel.textContent   = m.label
+  modeLabel.style.color   = m.color
+  ringProgress.style.stroke = m.color
+  ringProgress.style.strokeDashoffset = CIRC * (timeLeft / total)
+  playBtn.style.background = m.color
+  playBtn.style.boxShadow  = running ? `0 0 28px ${m.color}66` : 'none'
+  document.title = running ? `${mins}:${secs} — ${m.label}` : 'Focus Timer'
+
+  // Tabs
+  document.querySelectorAll('.mode-tab').forEach(btn => {
+    btn.classList.remove('active','green','amber')
+    if (btn.dataset.mode === mode) {
+      btn.classList.add('active')
+      if (m.tabClass) btn.classList.add(m.tabClass)
+    }
+  })
+
+  // Round dots
+  for(let i=0;i<4;i++){
+    const dot = document.getElementById('dot'+i)
+    const filled = i < ((round-1)%4)
+    const current = i === ((round-1)%4) && mode==='FOCUS'
+    dot.style.background = filled ? m.color : current ? m.color+'66' : '#2a2a50'
+  }
+  roundLabel.textContent = `Round ${round}`
+}
+
+// ── Switch mode ───────────────────────────────────────────────────────────────
+function switchMode(m) {
+  clearInterval(interval); running = false
+  mode = m
+  timeLeft = MODES[m].getMin() * 60
+  playBtn.textContent = '▶'
+  renderTimer()
+}
+
+// ── Play / Pause ──────────────────────────────────────────────────────────────
+function toggle() {
+  if (running) {
+    clearInterval(interval); running = false
+    playBtn.textContent = '▶'
+  } else {
+    running = true
+    playBtn.textContent = '⏸'
+    interval = setInterval(() => {
+      timeLeft--
+      if (timeLeft <= 0) {
+        clearInterval(interval); running = false
+        playBtn.textContent = '▶'
+        onComplete()
+      }
+      renderTimer()
+    }, 1000)
+  }
+  renderTimer()
+}
+
+// ── Reset ─────────────────────────────────────────────────────────────────────
+function reset() {
+  clearInterval(interval); running = false
+  playBtn.textContent = '▶'
+  timeLeft = MODES[mode].getMin() * 60
+  renderTimer()
+}
+
+// ── Skip ──────────────────────────────────────────────────────────────────────
+function skip() {
+  clearInterval(interval); running = false
+  playBtn.textContent = '▶'
+  if (mode==='FOCUS') {
+    round++
+    switchMode(round%4===0 ? 'LONG' : 'SHORT')
+  } else {
+    switchMode('FOCUS')
+  }
+}
+
+// ── Session complete ──────────────────────────────────────────────────────────
+function onComplete() {
+  const m = MODES[mode]
+  // Log history
+  history.unshift({ mode, label:m.label, time:new Date().toISOString() })
+  if (history.length > 50) history.pop()
+  localStorage.setItem('ft_history', JSON.stringify(history))
+  renderHistory()
+
+  // Pomodoro on active task
+  if (mode==='FOCUS' && activeId) {
+    tasks = tasks.map(t => t.id===activeId ? {...t, pomos:(t.pomos||0)+1} : t)
+    saveTasks(); renderTasks()
+  }
+
+  showToast(`${m.label} complete! 🎉`)
+  try {
+    const ctx = new (window.AudioContext||window.webkitAudioContext)()
+    const osc = ctx.createOscillator(), gain = ctx.createGain()
+    osc.connect(gain); gain.connect(ctx.destination)
+    osc.frequency.value=880; osc.type='sine'
+    gain.gain.setValueAtTime(.3,ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.6)
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime+.6)
+  } catch{}
+
+  // Auto switch
+  if (mode==='FOCUS') { round++; switchMode(round%4===0?'LONG':'SHORT') }
+  else switchMode('FOCUS')
+}
+
+// ── Tasks ─────────────────────────────────────────────────────────────────────
+function saveTasks() { localStorage.setItem('ft_tasks', JSON.stringify(tasks)) }
+
+function addTask() {
+  const input = document.getElementById('task-input')
+  const text  = input.value.trim()
+  if (!text) return
+  tasks.push({ id:Date.now(), text, done:false, pomos:0 })
+  if (!activeId) activeId = tasks[tasks.length-1].id
+  input.value = ''
+  saveTasks(); renderTasks()
+}
+
+function renderTasks() {
+  const list  = document.getElementById('task-list')
+  const empty = document.getElementById('task-empty')
+  const active = tasks.filter(t=>!t.done)
+  const done   = tasks.filter(t=>t.done)
+  const all    = [...active,...done]
+
+  if (!all.length) { empty.style.display='block'; list.innerHTML=''; list.appendChild(empty); return }
+  empty.style.display='none'
+
+  list.innerHTML = all.map(t => `
+    <div class="task-row ${t.id===activeId&&!t.done?'active':''} ${t.done?'done':''}"
+         onclick="selectTask(${t.id})" id="task-${t.id}">
+      <button class="check-btn ${t.done?'checked':''}" onclick="event.stopPropagation();toggleTask(${t.id})">
+        ${t.done?'✓':''}
+      </button>
+      <span class="task-text ${t.done?'done-text':''}">${t.text}</span>
+      ${t.pomos>0?`<span class="tomato">${'🍅'.repeat(Math.min(t.pomos,4))}${t.pomos>4?` ×${t.pomos}`:''}</span>`:''}
+      ${t.id===activeId&&!t.done?'<span style="width:6px;height:6px;border-radius:50%;background:#6366f1;flex-shrink:0;display:inline-block"></span>':''}
+      <button class="del-btn" onclick="event.stopPropagation();deleteTask(${t.id})">×</button>
+    </div>
+  `).join('')
+}
+
+function selectTask(id) {
+  const t = tasks.find(t=>t.id===id)
+  if (t && t.done) return
+  activeId = activeId===id ? null : id
+  renderTasks()
+}
+function toggleTask(id) {
+  tasks = tasks.map(t=>t.id===id?{...t,done:!t.done}:t)
+  if (activeId===id) activeId=null
+  saveTasks(); renderTasks()
+}
+function deleteTask(id) {
+  tasks = tasks.filter(t=>t.id!==id)
+  if (activeId===id) activeId=null
+  saveTasks(); renderTasks()
+}
+
+// ── History ───────────────────────────────────────────────────────────────────
+function renderHistory() {
+  const card = document.getElementById('hist-card')
+  const list = document.getElementById('hist-list')
+  if (!history.length) { card.style.display='none'; return }
+  card.style.display='block'
+  const icons = { FOCUS:'🎯', SHORT:'☕', LONG:'🌿' }
+  list.innerHTML = history.slice(0,8).map(h => {
+    const t = new Date(h.time).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})
+    return `<div class="hist-row" style="background:${h.mode==='FOCUS'?'#6366f111':h.mode==='SHORT'?'#10b98111':'#f59e0b11'}">
+      <span class="hist-icon">${icons[h.mode]||'📍'}</span>
+      <span class="hist-info">${h.label}</span>
+      <span class="hist-time">${t}</span>
+    </div>`
+  }).join('')
+}
+function clearHistory() { history=[]; localStorage.removeItem('ft_history'); renderHistory() }
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+function openSettings() {
+  document.getElementById('set-focus').value = settings.focusMin
+  document.getElementById('set-short').value = settings.shortMin
+  document.getElementById('set-long').value  = settings.longMin
+  document.getElementById('settings-modal').classList.add('open')
+}
+function closeSettings() {
+  document.getElementById('settings-modal').classList.remove('open')
+}
+function saveSettings() {
+  const f = parseInt(document.getElementById('set-focus').value)
+  const s = parseInt(document.getElementById('set-short').value)
+  const l = parseInt(document.getElementById('set-long').value)
+  if (f>0 && s>0 && l>0) {
+    settings = { focusMin:f, shortMin:s, longMin:l }
+    localStorage.setItem('ft_settings', JSON.stringify(settings))
+    clearInterval(interval); running=false; playBtn.textContent='▶'
+    timeLeft = MODES[mode].getMin() * 60
+    closeSettings()
+    renderTimer()
+    showToast(`✓ Timer updated — Focus: ${f} min`)
+  }
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let toastTimer
+function showToast(msg) {
+  const t = document.getElementById('toast')
+  t.textContent = msg; t.style.display='block'
+  clearTimeout(toastTimer)
+  toastTimer = setTimeout(()=>t.style.display='none', 2500)
+}
+
+// ── Event listeners ───────────────────────────────────────────────────────────
+playBtn.addEventListener('click', toggle)
+document.getElementById('reset-btn').addEventListener('click', reset)
+document.getElementById('skip-btn').addEventListener('click', skip)
+document.getElementById('settings-btn').addEventListener('click', openSettings)
+document.getElementById('modal-close').addEventListener('click', closeSettings)
+document.getElementById('modal-cancel').addEventListener('click', closeSettings)
+document.getElementById('modal-save').addEventListener('click', saveSettings)
+document.getElementById('add-task-btn').addEventListener('click', addTask)
+document.getElementById('task-input').addEventListener('keydown', e=>{ if(e.key==='Enter') addTask() })
+document.querySelectorAll('.mode-tab').forEach(btn => {
+  btn.addEventListener('click', ()=>switchMode(btn.dataset.mode))
+})
+document.getElementById('settings-modal').addEventListener('click', e=>{
+  if(e.target===document.getElementById('settings-modal')) closeSettings()
+})
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+renderTimer()
+renderTasks()
+renderHistory()
+</script>
+</body>
+</html>
