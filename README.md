@@ -1,4 +1,4 @@
-# ⏱️ Focus Timer
+#  Focus Timer
 
 A Pomodoro-style focus timer. No installation needed — just open `index.html` in any browser.
 
